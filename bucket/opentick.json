@@ -1,38 +1,42 @@
 {
-    "version": "0.4.0",
-    "description": "A cross-platform task manager inspired by TickTick",
-    "homepage": "https://github.com/JebbyCodes/OpenTick",
-    "license": "Unlicense",
-    "architecture": {
-        "64bit": {
-            "url": "https://github.com/JebbyCodes/OpenTick/releases/download/v0.4.0/OpenTick_0.4.0_x64-setup.exe",
-            "hash": "3ADD325225024EF623DD8F459F428C39B88A057880A70BD089948308D08A3CD1"
-        }
-    },
-    "installer": {
-        "args": ["/S"]
-    },
-    "uninstaller": {
-        "script": [
-            "$keys = @('HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*', 'HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*', 'HKLM:\\Software\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*')",
-            "$entry = Get-ItemProperty $keys -ErrorAction SilentlyContinue | Where-Object { $_.DisplayName -like 'OpenTick*' -and $_.UninstallString } | Select-Object -First 1",
-            "if (-not $entry) { throw 'Could not find the OpenTick uninstaller in the registry. OpenTick may already be uninstalled.' }",
-            "$command = if ($entry.QuietUninstallString) { $entry.QuietUninstallString } else { $entry.UninstallString }",
-            "if ($command -match '^\\s*`\"([^`\"]+)`\"\\s*(.*)$') { $exe = $matches[1]; $args = $matches[2] } else { $parts = $command -split '\\s+', 2; $exe = $parts[0]; $args = if ($parts.Count -gt 1) { $parts[1] } else { '' } }",
-            "if ($exe -match '(?i)uninstall\\.exe$' -and $args -notmatch '(?i)(^|\\s)/S(\\s|$)') { $args = ($args + ' /S').Trim() }",
-            "$process = Start-Process -FilePath $exe -ArgumentList $args -Wait -PassThru",
-            "if ($process.ExitCode -ne 0) { throw \"OpenTick uninstaller exited with code $($process.ExitCode)\" }"
-        ]
-    },
-    "checkver": {
-        "github": "https://github.com/JebbyCodes/OpenTick"
-    },
-    "autoupdate": {
-        "architecture": {
-            "64bit": {
-                "url": "https://github.com/JebbyCodes/OpenTick/releases/download/v$version/OpenTick_$version_x64-setup.exe"
-            }
-        }
+  "version": "0.4.0",
+  "description": "A cross-platform task manager inspired by TickTick",
+  "homepage": "https://github.com/JebbyCodes/OpenTick",
+  "license": "Unlicense",
+  "architecture": {
+    "64bit": {
+      "url": "https://github.com/JebbyCodes/OpenTick/releases/download/v0.4.0/OpenTick_0.4.0_x64-setup.exe",
+      "hash": "3ADD325225024EF623DD8F459F428C39B88A057880A70BD089948308D08A3CD1"
     }
+  },
+  "installer": {
+    "args": [
+      "/S"
+    ]
+  },
+  "uninstaller": {
+    "script": [
+      "$keys = @(\"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*\", \"HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*\", \"HKLM:\\Software\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*\")",
+      "$entry = Get-ItemProperty -Path $keys -ErrorAction SilentlyContinue | Where-Object { $_.DisplayName -like \"OpenTick*\" -and $_.UninstallString } | Select-Object -First 1",
+      "if (-not $entry) { throw \"Could not find the OpenTick uninstaller in the registry.\" }",
+      "$command = if ($entry.QuietUninstallString) { $entry.QuietUninstallString } else { $entry.UninstallString }",
+      "if ($command -match '^\\s*\"([^\"]+)\"\\s*(.*)$') { $exe = $matches[1]; $args = $matches[2] } else { $parts = $command -split \"\\s+\", 2; $exe = $parts[0].Trim([char]34); $args = if ($parts.Count -gt 1) { $parts[1] } else { \"\" } }",
+      "if (-not (Test-Path -LiteralPath $exe)) { throw \"Uninstaller executable not found: $exe\" }",
+      "if ($exe -match \"(?i)uninstall\\.exe$\" -and $args -notmatch \"(?i)(^|\\s)/S(\\s|$)\") { $args = ($args + \" /S\").Trim() }",
+      "$process = Start-Process -FilePath $exe -ArgumentList $args -PassThru",
+      "if (-not $process.WaitForExit(60000)) { try { $process.Kill() } catch {}; throw \"OpenTick uninstaller timed out after 60 seconds.\" }",
+      "$process.Refresh()",
+      "if ($process.ExitCode -ne 0) { throw \"OpenTick uninstaller exited with code $($process.ExitCode)\" }"
+    ]
+  },
+  "checkver": {
+    "github": "https://github.com/JebbyCodes/OpenTick"
+  },
+  "autoupdate": {
+    "architecture": {
+      "64bit": {
+        "url": "https://github.com/JebbyCodes/OpenTick/releases/download/v$version/OpenTick_$version_x64-setup.exe"
+      }
+    }
+  }
 }
-
