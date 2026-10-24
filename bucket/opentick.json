@@ -6,7 +6,7 @@
   "architecture": {
     "64bit": {
       "url": "https://github.com/JebbyCodes/OpenTick/releases/download/v0.4.0/OpenTick_0.4.0_x64-setup.exe",
-      "hash": "3ADD325225024EF623DD8F459F428C39B88A057880A70BD089948308D08A3CD1"
+      "hash": "3add325225024ef623dd8f459f428c39b88a057880a70bd089948308d08a3cd1"
     }
   },
   "installer": {
