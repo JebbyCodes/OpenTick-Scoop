@@ -1,0 +1,116 @@
+name: Test Scoop Manifest
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "bucket/opentick.json"
+      - ".github/workflows/test-scoop.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test on disposable Windows runner
+    runs-on: windows-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out bucket
+        uses: actions/checkout@v4
+
+      - name: Validate manifest and installer checksum
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $manifestPath = "bucket/opentick.json"
+          $manifest = Get-Content $manifestPath -Raw | ConvertFrom-Json
+
+          if (-not $manifest.version) {
+            throw "Manifest is missing version."
+          }
+
+          if (-not $manifest.architecture.'64bit'.url) {
+            throw "Manifest is missing the 64-bit download URL."
+          }
+
+          if (-not $manifest.architecture.'64bit'.hash) {
+            throw "Manifest is missing the 64-bit SHA-256 hash."
+          }
+
+          $url = $manifest.architecture.'64bit'.url.Replace(
+            '$version', [string]$manifest.version
+          )
+
+          if ($url.Contains('`')) {
+            throw "Download URL contains a stray backtick: $url"
+          }
+
+          Write-Host "Testing version: $($manifest.version)"
+          Write-Host "Download URL: $url"
+
+          $downloadPath = Join-Path $env:RUNNER_TEMP "OpenTick-setup.exe"
+          Invoke-WebRequest -Uri $url -OutFile $downloadPath
+
+          $actualHash = (Get-FileHash $downloadPath -Algorithm SHA256).Hash
+          $expectedHash = [string]$manifest.architecture.'64bit'.hash
+
+          if ($actualHash -ne $expectedHash) {
+            throw "SHA-256 mismatch. Expected $expectedHash but got $actualHash"
+          }
+
+          Write-Host "Manifest JSON and installer checksum are valid."
+
+      - name: Install Scoop and add bucket
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser -Force
+          Invoke-RestMethod -Uri https://get.scoop.sh | Invoke-Expression
+
+          $scoop = Join-Path $env:USERPROFILE "scoop\shims\scoop.ps1"
+          if (-not (Test-Path $scoop)) {
+            throw "Scoop was not found at $scoop"
+          }
+
+          & $scoop bucket add opentick https://github.com/JebbyCodes/OpenTick-Scoop
+          if ($LASTEXITCODE -ne 0) {
+            throw "Could not add the OpenTick bucket."
+          }
+
+          & $scoop info opentick
+          if ($LASTEXITCODE -ne 0) {
+            throw "Scoop could not read the OpenTick manifest."
+          }
+
+      - name: Install OpenTick using Scoop
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $scoop = Join-Path $env:USERPROFILE "scoop\shims\scoop.ps1"
+
+          & $scoop install opentick
+          if ($LASTEXITCODE -ne 0) {
+            throw "Scoop installation failed."
+          }
+
+          & $scoop list opentick
+          if ($LASTEXITCODE -ne 0) {
+            throw "OpenTick does not appear in the Scoop app list."
+          }
+
+      - name: Uninstall OpenTick using Scoop
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $scoop = Join-Path $env:USERPROFILE "scoop\shims\scoop.ps1"
+
+          & $scoop uninstall opentick
+          if ($LASTEXITCODE -ne 0) {
+            throw "Scoop uninstallation failed."
+          }
+
+          Write-Host "Scoop installation and uninstallation succeeded."
