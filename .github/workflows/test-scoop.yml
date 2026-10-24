@@ -20,7 +20,7 @@ jobs:
 
     steps:
       - name: Check out bucket
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Validate manifest and installer checksum
         shell: pwsh
@@ -114,3 +114,4 @@ jobs:
           }
 
           Write-Host "Scoop installation and uninstallation succeeded."
+
